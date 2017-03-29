@@ -3,11 +3,16 @@ package com.example.lance.myapplication;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 import android.os.ParcelUuid;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -75,12 +80,34 @@ public class ScanActivity extends AppCompatActivity {
 
         listview.setOnItemClickListener(new AdapterView.OnItemClickListener(){
 
+            @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
                 BluetoothDevice device = deviceList.get(position);
                 DisplayToast("Connecting "+ device.getName());
-                ParcelUuid test = device.getUuids()[position];
-                testUUID = test.getUuid();
+                //System.out.println("++++++++++++++++++++++++++++++++++++++"+device.getUuids().toString());
+                int currentapiVersion=android.os.Build.VERSION.SDK_INT;
+                System.out.println("+++++++++++++++"+currentapiVersion);
+                if(currentapiVersion >=21){
+                    BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
+                    scanner.startScan(new ScanCallback() {
+                        @Override
+                        public void onScanResult(int callbackType, ScanResult result) {
+                            ParcelUuid[] uuids = result.getDevice().getUuids();
+                            testUUID=uuids[position].getUuid();
+                            super.onScanResult(callbackType, result);
+                        }
+                    });
+                }else{
+                    ParcelUuid test = device.getUuids()[position];
+                    ParcelUuid[] uuids = device.getUuids();
+                    System.out.println("+++++++++++++++"+uuids.length);
+                    for(int a=0;a<uuids.length;a++){
+                        System.out.println("+++++++++++++++"+uuids[a]);
+                    }
+
+                    testUUID = test.getUuid();
+                }
                 new ConnectThread(mBluetoothAdapter.getRemoteDevice(device.getAddress())).start();
             }
         });
